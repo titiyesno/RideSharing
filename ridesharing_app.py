@@ -69,6 +69,18 @@ class rideserverfunc(threading.Thread):
 					print e
 					self.client.send('500 Sorry.\r\n')
 
+	def PRES(self,cmd):
+		if cmd.strip().split()[1] == "Anonymous":
+			self.client.send("Please identify yourself\r\n")
+		else:
+			global flag_role
+			flag_role = cmd.strip().split()[2]
+			#print cmd
+			if flag_role == "0":
+				self.client.send("Hai "+cmd.strip().split()[1]+"\nYou're identified as a passenger\r\n")
+			else:
+				self.client.send("Hai "+cmd.strip().split()[1]+"\nYou're identified as a driver\r\n")
+
 if __name__=='__main__':
 	ride = rideserver()
 	ride.daemon = True
