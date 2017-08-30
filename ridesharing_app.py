@@ -74,12 +74,23 @@ class rideserverfunc(threading.Thread):
 			self.client.send("Please identify yourself\r\n")
 		else:
 			global flag_role
+			global user
+			global driver
+			driver = []
 			flag_role = cmd.strip().split()[2]
+			user = cmd.strip().split()[1]
 			#print cmd
 			if flag_role == "0":
-				self.client.send("Hai "+cmd.strip().split()[1]+"\nYou're identified as a passenger\r\n")
+				self.client.send("Hai "+user+"\nYou're identified as a passenger\r\n")
 			else:
-				self.client.send("Hai "+cmd.strip().split()[1]+"\nYou're identified as a driver\r\n")
+				driver.append(user)
+				self.client.send("Hai "+user+"\nYou're identified as a driver\r\n")
+
+	def RQST(self,cmd):
+		if not driver:
+			self.client.send("Sorry. There is no driver available for you\r\n")
+		else:
+			self.client.send("Please wait\r\n")
 
 if __name__=='__main__':
 	ride = rideserver()

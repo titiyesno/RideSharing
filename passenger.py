@@ -1,5 +1,7 @@
 import socket
 import sys
+import requests
+import json
 
 
 server_addr = ('127.0.0.1',5000)
@@ -31,6 +33,14 @@ try:
 		else:
 			if "PRES" in msg:
 				msg = msg + " " + str(flag_passenger)
+
+			elif "RQST" in msg:
+				send_url = 'http://freegeoip.net/json'
+				r = requests.get(send_url)
+				j = json.loads(r.text)
+				lat = j['latitude']
+				lon = j['longitude']
+				msg = msg + " " + str(lat) + " " + str(lon)
 				
 			client.send(msg)
 			pesan = client.recv(1024)
