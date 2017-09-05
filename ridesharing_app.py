@@ -1,99 +1,108 @@
 import socket
 import select
-import threading
+from thread import *
 import sys
-import time
 
-allow_delete = False
-local_ip = socket.gethostbyname(socket.gethostname())
 
-class rideserver(threading.Thread):
-	def __init__(self):
-		self.host = '127.0.0.1'
-		self.port = 5000
-		self.mode = 'I'
-		self.backlog = 5
-		self.size = 1024
-		self.threads = []
-		threading.Thread.__init__(self)
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-	def open_socket(self):
-		self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
-		self.server.bind((self.host, self.port))
-		self.server.listen(5)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-	def run(self):
-		self.open_socket()
-		input = [self.server, sys.stdin]
-		running = 1
-		while running:
-			inputready, outputready, exceptready = select.select(input, [], [])
+IP_address = '127.0.0.1'
+Port = 5000
+server.bind((IP_address, Port)) 
+server.listen(100)
+print "Waiting..."
+list_of_clients=[]
+passengers = {}
+drivers = {}
 
-			for s in inputready:
-				if s == self.server:
-					print s
-					c = rideserverfunc(self.server.accept())
-					c.start()
-					self.threads.append(c)
-				elif s == sys.stdin:
-					junk = sys.stdin.readline()
-					running = 0
+def clientthread(conn, addr):
+    conn.send("Welcome to ridesharing!")
+    i=0
+    while True:
+            try:     
+                message = conn.recv(2048)    
+                if message:
+                    print "<" + addr[0] + "> " + message
+                    message_to_send = "<" + addr[0] + "> " + message
+                    if i == 0:
+                        if message.split()[0] != "PRESENCE":
+                            conn.send("Please identify yourself")
+                        elif message.split()[0] == "PRESENCE":
+                            whoami(message,conn)
+                    else:
+                        if message.split()[0] == "PRESENCE":
+                            whoami(message,conn)
+                        elif message.split()[0] == "REQUEST":
+                            conn.send("Processing request.. please wait")
+                            send_request(message,conn)
+                        elif message.split()[0] == "ACCEPT":
+                            conn.send("Request accepted")
+                            accept_request(message)
+                        elif message.split()[0] == "APPROACH":
+                            approach(message)
+                        elif message.split()[0] == "START":
+                            print message
+                        elif message.split()[0] == "END":
+                            print message
+                    #broadcast(message_to_send,conn)
+                else:
+                    remove(conn)
+            except:
+                continue
+            i+=1
 
-		self.server.close()
-		for c in self.threads:
-			c.join()
+def whoami(message,conn):
+    print message
+    if message.split()[2] == "0":
+        passengers[message.split()[1]] = conn
+        conn.send("You're identified as a passenger")
+    else:
+        drivers[message.split()[1]] = conn
+        conn.send("You're identified as a driver")
 
-class rideserverfunc(threading.Thread):
-	def __init__(self, (client,address)):
-		threading.Thread.__init__(self)
-		self.client = client
-		self.address = address
-		self.rest = False
-		self.pasv_mode = False
-		self.size = 1024
-		self.running = True
+def send_request(message,conn):
+    if not drivers:
+        conn.send("No drivers available")
+        remove(conn)
+    else:
+        for drv in drivers:
+            if drivers[drv] != conn:
+                try:
+                    drivers[drv].send(message.split()[1] + " need a ride. Lat: " + message.split()[2] + " Lon: " + message.split()[3])
+                except:
+                    drivers[drv].close()
+                    remove(drivers[drv])
 
-	def run(self):
-		self.client.send('220 Welcome!\r\n')
-		while self.running:
-			cmd = self.client.recv(self.size)
-			if not cmd:
-				break
-			else:
-				print 'recv: ',cmd
-				try:
-					func=getattr(self, cmd[:4].strip().upper())
-					func(cmd)
-				except Exception,e:
-					print e
-					self.client.send('500 Sorry.\r\n')
+def accept_request(message):
+    passengers[message.split()[1]].send("Driver " + message.split()[2] + " accept your request. Please wait")
 
-	def PRES(self,cmd):
-		if cmd.strip().split()[1] == "Anonymous":
-			self.client.send("Please identify yourself\r\n")
-		else:
-			global flag_role
-			global user
-			global driver
-			driver = []
-			flag_role = cmd.strip().split()[2]
-			user = cmd.strip().split()[1]
-			#print cmd
-			if flag_role == "0":
-				self.client.send("Hai "+user+"\nYou're identified as a passenger\r\n")
-			else:
-				driver.append(user)
-				self.client.send("Hai "+user+"\nYou're identified as a driver\r\n")
+def approach(message):
+    passengers[message.split()[1]].send("Approaching... Lat: " + message.split()[2] + " Lon: " + message.split()[3])
 
-	def RQST(self,cmd):
-		if not driver:
-			self.client.send("Sorry. There is no driver available for you\r\n")
-		else:
-			self.client.send("Please wait\r\n")
+def broadcast(message,connection):
+    for clients in list_of_clients:
+        if clients!=connection:
+            try:
+                clients.send(message)
+            except:
+                clients.close()
+                remove(clients)
 
-if __name__=='__main__':
-	ride = rideserver()
-	ride.daemon = True
-	ride.start()
-	raw_input('Enter to end...\n')
+def remove(connection):
+    if connection in list_of_clients:
+        list_of_clients.remove(connection)
+
+while True:
+    conn, addr = server.accept()
+    
+    list_of_clients.append(conn)
+    print addr[0] + " connected"
+    #maintains a list of clients for ease of broadcasting a message to all available people in the chatroom
+    #Prints the address of the person who just connected
+    start_new_thread(clientthread,(conn,addr))
+    #creates and individual thread for every user that connects
+
+conn.close()
+server.close()

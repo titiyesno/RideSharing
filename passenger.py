@@ -1,56 +1,39 @@
 import socket
+import select
 import sys
 import requests
 import json
 
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+IP_address = '127.0.0.1'
+Port = 5000
+server.connect((IP_address, Port))
 
-server_addr = ('127.0.0.1',5000)
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(server_addr)
+flag_passenger = 0
 
-sys.stdout.write(client.recv(1024))
+while True:
+    sockets_list = [sys.stdin, server]
+    read_sockets,write_socket, error_socket = select.select(sockets_list, [], [])
+    for socks in read_sockets:
+        if socks == server:
+            message = socks.recv(2048)
+            print message
+        else:
+            message = sys.stdin.readline()
+            if message.split()[0] == "PRESENCE":
+            	message = message + " " + str(flag_passenger)
+            	name = message.split()[1]
+            elif message.split()[0] == "REQUEST":
+            	send_url = 'http://freegeoip.net/json'
+            	r = requests.get(send_url)
+            	j = json.loads(r.text)
+            	lat = j['latitude']
+            	lon = j['longitude']
+            	message = message + " " + name + " " + str(lat) + " " + str(lon)
 
+            server.send(message)
+            # sys.stdout.write(">>")
+            # sys.stdout.write(message)
+            sys.stdout.flush()
 
-i=0
-flag_passenger=0
-
-try:
-	while True:
-		sys.stdout.write('>>')
-		msg = sys.stdin.readline()
-
-		if i==0:
-			if "PRES" not in msg:
-				client.send("PRES Anonymous")
-				pesan = client.recv(1024)
-				sys.stdout.write(pesan)
-			else:
-				msg = msg + " " + str(flag_passenger)
-				client.send(msg)
-				pesan = client.recv(1024)
-				sys.stdout.write(pesan)
-
-		else:
-			if "PRES" in msg:
-				msg = msg + " " + str(flag_passenger)
-
-			elif "RQST" in msg:
-				send_url = 'http://freegeoip.net/json'
-				r = requests.get(send_url)
-				j = json.loads(r.text)
-				lat = j['latitude']
-				lon = j['longitude']
-				msg = msg + " " + str(lat) + " " + str(lon)
-				
-			client.send(msg)
-			pesan = client.recv(1024)
-			sys.stdout.write(pesan)
-
-		i+=1
-
-
-except KeyboardInterrupt:
-	client.close()
-
-	sys.exit(0)
-
+server.close()
