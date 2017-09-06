@@ -46,7 +46,8 @@ def clientthread(conn, addr):
                             print "<" + addr[0] + "> " + message
                         elif message.split()[0] == "END":
                             print "<" + addr[0] + "> " + message
-                    #broadcast(message_to_send,conn)
+                        else:
+                            conn.send("Command not found")
                 else:
                     remove(conn)
             except:
