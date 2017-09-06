@@ -24,8 +24,8 @@ def clientthread(conn, addr):
             try:     
                 message = conn.recv(2048)    
                 if message:
-                    print "<" + addr[0] + "> " + message
-                    message_to_send = "<" + addr[0] + "> " + message
+                    # print "<" + addr[0] + "> " + message
+                    # message_to_send = "<" + addr[0] + "> " + message
                     if i == 0:
                         if message.split()[0] != "PRESENCE":
                             conn.send("Please identify yourself")
@@ -43,9 +43,9 @@ def clientthread(conn, addr):
                         elif message.split()[0] == "APPROACH":
                             approach(message)
                         elif message.split()[0] == "START":
-                            print message
+                            print "<" + addr[0] + "> " + message
                         elif message.split()[0] == "END":
-                            print message
+                            print "<" + addr[0] + "> " + message
                     #broadcast(message_to_send,conn)
                 else:
                     remove(conn)
@@ -54,7 +54,6 @@ def clientthread(conn, addr):
             i+=1
 
 def whoami(message,conn):
-    print message
     if message.split()[2] == "0":
         passengers[message.split()[1]] = conn
         conn.send("You're identified as a passenger")
@@ -81,15 +80,6 @@ def accept_request(message):
 def approach(message):
     passengers[message.split()[1]].send("Approaching... Lat: " + message.split()[2] + " Lon: " + message.split()[3])
 
-def broadcast(message,connection):
-    for clients in list_of_clients:
-        if clients!=connection:
-            try:
-                clients.send(message)
-            except:
-                clients.close()
-                remove(clients)
-
 def remove(connection):
     if connection in list_of_clients:
         list_of_clients.remove(connection)
@@ -99,10 +89,7 @@ while True:
     
     list_of_clients.append(conn)
     print addr[0] + " connected"
-    #maintains a list of clients for ease of broadcasting a message to all available people in the chatroom
-    #Prints the address of the person who just connected
     start_new_thread(clientthread,(conn,addr))
-    #creates and individual thread for every user that connects
 
 conn.close()
 server.close()

@@ -32,8 +32,7 @@ while True:
             	message = message + " " + name + " " + str(lat) + " " + str(lon)
 
             server.send(message)
-            # sys.stdout.write(">>")
-            # sys.stdout.write(message)
+
             sys.stdout.flush()
 
 server.close()
