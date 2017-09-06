@@ -2,7 +2,7 @@
 Ride Sharing App in Python
 
 ==========================
-		User Manual
+	User Manual
 ==========================
 
 Server : ridesharing_app.py
